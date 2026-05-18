@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CineMatch — AI Movie Recommender</title>
+  <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+
+  <nav class="navbar">
+    <div class="nav-inner">
+      <a href="/" class="logo">CineMatch</a>
+      <span class="tagline">Find Your Next Favorite Movie</span>
+    </div>
+  </nav>
+
+  <section class="hero">
+    <div class="hero-content">
+      <h1>Discover Movies <span class="gradient-text">You'll Love</span></h1>
+      <p>Powered by AI — pick a movie and get intelligent recommendations instantly.</p>
+      <div class="search-box" id="searchBox">
+        <input type="text" id="searchInput" placeholder="Search for a movie..." autocomplete="off">
+        <button id="searchBtn">Find Similar</button>
+        <div class="dropdown" id="dropdown"></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="trending">
+    <div class="section-header">
+      <h2>Trending Now</h2>
+    </div>
+    <div class="movie-grid" id="trendingGrid">
+      {% set gradients = [ 
+        ['#e50914', '#6c63ff'], ['#ff6b35', '#f7c59f'], ['#00b4d8', '#0077b6'],
+        ['#06d6a0', '#118ab2'], ['#7209b7', '#3a0ca3'], ['#f72585', '#b5179e'],
+        ['#e63946', '#457b9d'], ['#2ec4b6', '#ff9f1c'], ['#8338ec', '#3a86ff'],
+        ['#ff006e', '#fb5607']
+      ] %}
+      {% for movie in trending %}
+      <div class="movie-card" data-title="{{ movie.title | e }}">
+        <div class="card-poster" style="background: linear-gradient(135deg, {{ gradients[loop.index0 % 10][0] }}, {{ gradients[loop.index0 % 10][1] }})">
+          {% if movie.poster_url %}
+          <img class="poster-img" src="{{ movie.poster_url }}" alt="{{ movie.title | e }}" loading="lazy">
+          {% else %}
+          <span class="poster-initial">{{ movie.title[0] }}</span>
+          {% endif %}
+          <span class="rating-badge">{{ movie.vote_average }}</span>
+        </div>
+        <div class="card-body">
+          <h3>{{ movie.title }}</h3>
+          <p class="genres">{{ movie.genres[:3] | join(', ') }}</p>
+          <p class="overview">{{ movie.overview[:120] ~ '...' if movie.overview and movie.overview|length > 120 else movie.overview }}</p>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </section>
+
+  <footer class="footer">
+    <p>CineMatch — AI Powered Movie Recommendation System | Mini Project</p>
+  </footer>
+
+  <script src="/static/js/script.js"></script>
+</body>
+</html>

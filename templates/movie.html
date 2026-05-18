@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{ movie.title }} — CineMatch</title>
+  <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+
+  <nav class="navbar">
+    <div class="nav-inner">
+      <a href="/" class="logo">CineMatch</a>
+      <span class="tagline">Find Your Next Favorite Movie</span>
+    </div>
+  </nav>
+
+  <section class="movie-detail-hero">
+    <div class="detail-layout">
+      <div class="detail-poster">
+        {% if movie.poster_url %}
+        <img src="{{ movie.poster_url }}" alt="{{ movie.title | e }}">
+        {% endif %}
+      </div>
+      <div class="detail-content">
+        <h1>{{ movie.title }}</h1>
+        {% if movie.tagline %}
+        <p class="tagline">{{ movie.tagline }}</p>
+        {% endif %}
+        <div class="meta">
+          <span class="rating-large">{{ movie.vote_average }}</span>
+          <span class="meta-text">{{ movie.genres | join(' • ') }}</span>
+        </div>
+        <p class="detail-overview">{{ movie.overview }}</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="results">
+    <div class="section-header">
+      <h2>More Like This</h2>
+    </div>
+    <div class="movie-grid">
+      {% set gradients = [ 
+        ['#e50914', '#6c63ff'], ['#ff6b35', '#f7c59f'], ['#00b4d8', '#0077b6'],
+        ['#06d6a0', '#118ab2'], ['#7209b7', '#3a0ca3'], ['#f72585', '#b5179e'],
+        ['#e63946', '#457b9d'], ['#2ec4b6', '#ff9f1c'], ['#8338ec', '#3a86ff'],
+        ['#ff006e', '#fb5607']
+      ] %}
+      {% for rec in recommendations %}
+      <div class="movie-card" data-title="{{ rec.title | e }}">
+        <div class="card-poster" style="background: linear-gradient(135deg, {{ gradients[loop.index0 % 10][0] }}, {{ gradients[loop.index0 % 10][1] }})">
+          {% if rec.poster_url %}
+          <img class="poster-img" src="{{ rec.poster_url }}" alt="{{ rec.title | e }}" loading="lazy">
+          {% else %}
+          <span class="poster-initial">{{ rec.title[0] }}</span>
+          {% endif %}
+          <span class="rating-badge">{{ rec.vote_average }}</span>
+          <span class="sim-badge">{{ rec.similarity }}%</span>
+        </div>
+        <div class="card-body">
+          <h3>{{ rec.title }}</h3>
+          <p class="genres">{{ rec.genres[:3] | join(', ') }}</p>
+          <p class="overview">{{ rec.overview }}</p>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </section>
+
+  <footer class="footer">
+    <p>CineMatch — AI Powered Movie Recommendation System | Mini Project</p>
+  </footer>
+
+</body>
+</html>
