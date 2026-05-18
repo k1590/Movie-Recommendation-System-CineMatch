@@ -1,5 +1,7 @@
 # CineMatch – AI Powered Movie Recommendation System
 
+**Live Demo:** [movie-recommendation-system-cine-ma.vercel.app](https://movie-recommendation-system-cine-ma.vercel.app/)
+
 ## Project Overview
 
 CineMatch is an AI-powered Movie Recommendation System developed using Machine Learning techniques. The system recommends movies similar to a user-selected movie using a Content-Based Filtering approach.
