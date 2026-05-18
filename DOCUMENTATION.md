@@ -343,7 +343,7 @@ Predict movie popularity before release using only metadata features available a
 `popularity` — TMDB popularity score. A log transform is applied during training to handle the heavily skewed distribution.
 
 ### ML Algorithm
-**Random Forest Regressor** (300 trees) — an ensemble of decision trees that averages their predictions for better accuracy and reduced overfitting.
+**Random Forest Regressor** (100 trees) — an ensemble of decision trees that averages their predictions for better accuracy and reduced overfitting.
 
 ### Model Performance
 | Metric | Value |
