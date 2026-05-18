@@ -1,3 +1,4 @@
+import os
 from flask import Flask, render_template, request, jsonify
 from recommendation import (
     load_data,
@@ -7,11 +8,12 @@ from recommendation import (
     recommend,
     get_trending,
 )
+from prediction import train_model, load_model, predict as predict_success
 
 app = Flask(__name__)
 
-# Load dataset and build similarity matrix once at server startup
-print("Loading dataset...")
+# Recommendation system dataset (needs preprocessing)
+print("Loading dataset for recommendations...")
 df = load_data()
 df = preprocess(df)
 print(f"Loaded {len(df)} movies")
@@ -20,6 +22,17 @@ print("Similarity matrix built")
 
 poster_map = load_posters()
 print(f"Poster cache: {len(poster_map)} movies with posters")
+
+# Load or train prediction model (uses raw data, no preprocessing)
+print("Loading prediction model...")
+if os.path.exists("model/rf_model.pkl"):
+    pred_model = load_model()
+    print("Prediction model loaded from pickle")
+else:
+    print("Training prediction model...")
+    raw_df = load_data()
+    pred_model, pred_metrics = train_model(raw_df)
+    print(f"Prediction model trained (R²={pred_metrics['r2']})")
 
 
 # Homepage — search hero + trending movies grid
@@ -72,6 +85,28 @@ def movie_page(title):
         },
         recommendations=recs,
     )
+
+
+# Prediction form page
+@app.route("/predict")
+def predict_page():
+    return render_template("predict.html")
+
+
+# Predict API — receives movie features, returns predicted popularity + status
+@app.route("/predict", methods=["POST"])
+def predict_api():
+    data = request.get_json()
+    result = predict_success(
+        pred_model,
+        budget=data.get("budget", 0),
+        runtime=data.get("runtime", 0),
+        release_year=data.get("release_year", 2025),
+        genre_count=data.get("genre_count", 0),
+        keyword_count=data.get("keyword_count", 0),
+        genre_list=data.get("genres", []),
+    )
+    return jsonify(result)
 
 
 if __name__ == "__main__":

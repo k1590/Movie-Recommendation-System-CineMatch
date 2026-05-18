@@ -16,7 +16,8 @@ When a user clicks on a movie, the system analyzes the movie's **genres, keyword
 |-----------|-----------|
 | Frontend | HTML, CSS, JavaScript |
 | Backend | Python Flask |
-| Machine Learning | scikit-learn (CountVectorizer + Cosine Similarity) |
+| ML (Recommendation) | scikit-learn (CountVectorizer + Cosine Similarity) |
+| ML (Prediction) | scikit-learn (Random Forest Regressor) |
 | Data Processing | pandas, numpy |
 | Dataset | TMDB 5000 Movie Dataset |
 | Poster Images | TMDB API (via image.tmdb.org CDN) |
@@ -319,7 +320,73 @@ Recommendation systems do not use traditional "accuracy" metrics like classifica
 
 ---
 
-# 12. Flask Web Framework
+# 12. Movie Success Prediction Module
+
+## Overview
+CineMatch also includes a **Movie Success Prediction Module** that predicts how popular a movie will be based on its metadata. This solves a real-world problem for production companies and OTT platforms estimating a movie's potential reach before release.
+
+### Problem Solved
+Predict movie popularity before release using only metadata features available at production time.
+
+### Features Used (Input)
+| Feature | Source | Description |
+|---------|--------|-------------|
+| `budget` | Dataset column | Production budget in USD |
+| `log_budget` | Derived | Log-transformed budget (handles skew) |
+| `runtime` | Dataset column | Movie duration in minutes |
+| `release_year` | Parsed from `release_date` | Year of release |
+| `genre_count` | Derived from `genres` JSON | Number of genres |
+| `keyword_count` | Derived from `keywords` JSON | Number of keywords |
+| Genre dummies (×10) | One-hot encoded | Top 10 most common genres (Drama, Comedy, Thriller, etc.) |
+
+### Target (Output)
+`popularity` — TMDB popularity score. A log transform is applied during training to handle the heavily skewed distribution.
+
+### ML Algorithm
+**Random Forest Regressor** (300 trees) — an ensemble of decision trees that averages their predictions for better accuracy and reduced overfitting.
+
+### Model Performance
+| Metric | Value |
+|--------|-------|
+| R² Score | **0.5441** |
+| MAE | 0.6258 |
+| RMSE | 0.8026 |
+
+An R² of 0.5441 means the model explains ~54% of the variance in popularity — strong for metadata-only prediction.
+
+### Success Classification
+| Predicted Popularity | Classification |
+|---------------------|---------------|
+| ≥ 10.0 | **Hit** (top ~10% of movies) |
+| ≥ 2.0 | **Average** (above median) |
+| < 2.0 | **Flop** (below median) |
+
+### Training Workflow
+1. Extract features from raw dataset (no preprocessing)
+2. One-hot encode top 10 genres as binary features
+3. Log-transform popularity (target) for normalized distribution
+4. Split 80/20 train/test
+5. Train RandomForestRegressor (300 trees)
+6. Evaluate: R², MAE, RMSE
+7. Save model pickle to `model/rf_model.pkl`
+
+### Prediction Workflow
+1. User fills form (budget, runtime, year, genre checkboxes, keyword count)
+2. Frontend sends `POST /predict` with JSON body
+3. Backend loads pickle, creates feature row, calls `predict()`
+4. Returns predicted popularity + success classification
+5. Frontend displays result card with animated reveal
+
+### UI
+- Dedicated `/predict` page accessible from the navbar
+- 5 form inputs + 10 genre checkboxes (pill-style toggle buttons)
+- Gender-neutral: budget, runtime, year (number fields)
+- AJAX submission → no page reload
+- Result card shows: popularity score, status badge, input summary, model R²
+
+---
+
+# 13. Flask Web Framework
 
 ### Routes
 
@@ -329,6 +396,8 @@ Recommendation systems do not use traditional "accuracy" metrics like classifica
 | `/api/search?q=` | GET | Autocomplete — returns up to 10 matching movie titles as JSON |
 | `/recommend` | POST | Core ML endpoint — accepts `{"title": "Avatar"}`, returns 10 recommendations with metadata and poster URLs |
 | `/movie/<title>` | GET | Dedicated movie detail page with poster, info, and "More Like This" recommendations |
+| `/predict` | GET | Prediction form page |
+| `/predict` | POST | Accepts movie features (budget, runtime, etc.), returns predicted popularity + success status |
 
 ### How Flask Connects to ML
 
@@ -350,17 +419,19 @@ The ML model is **eager-loaded** at server startup, so all recommendations are i
 
 ---
 
-# 13. Limitations
+# 14. Limitations
 
 1. **No Personalization** — Recommendations are based on movie metadata, not the user's individual taste
 2. **Cold Start (New Movies)** — A completely new movie with unique genres/keywords may not have strong matches
 3. **Dependency on Metadata Quality** — Recommendations are only as good as the tags data
 4. **No User History** — The system doesn't learn from user behavior over time
 5. **Text-Only Similarity** — Visual/audio style, director, and other rich features are not considered
+6. **Prediction: Metadata Only** — Popularity prediction uses budget/runtime/genres but doesn't account for cast, director, marketing spend, or release timing
+7. **Static Dataset** — Both modules use a fixed dataset; new movies are not automatically added
 
 ---
 
-# 14. Future Improvements
+# 15. Future Improvements
 
 - **User Authentication** — Save watch history and preferences
 - **Collaborative Filtering Addition** — Hybrid system for better recommendations
@@ -524,19 +595,23 @@ python app.py
 
 > ```
 > ml project/
-> ├── app.py                    # Flask server with 4 routes
-> ├── recommendation.py         # ML engine (load, preprocess, similarity, recommend)
+> ├── app.py                    # Flask server with 6 routes (4 rec + 2 predict)
+> ├── recommendation.py         # Recommendation ML engine (CountVectorizer + Cosine)
+> ├── prediction.py             # Prediction ML engine (Random Forest Regressor)
 > ├── fetch_posters.py          # Batch downloads poster paths from TMDB API
 > ├── requirements.txt          # Python dependencies
 > ├── dataset/
 > │   ├── tmdb_5000_movies.csv  # 4803 movies metadata
 > │   └── posters_cache.csv     # Cached poster paths
+> ├── model/
+> │   └── rf_model.pkl          # Trained Random Forest model
 > ├── static/
 > │   ├── css/style.css         # Dark cinematic theme with glassmorphism
 > │   └── js/script.js          # Autocomplete, inline recommendations strip
 > └── templates/
 >     ├── index.html            # Homepage with trending movies
->     └── movie.html            # Movie detail page
+>     ├── movie.html            # Movie detail page
+>     └── predict.html          # Prediction form + result
 > ```
 
 ---
@@ -571,6 +646,31 @@ python app.py
 > 4. JavaScript dynamically injects the recommendation cards into the page
 >
 > The autocomplete search uses `GET /api/search?q=avat` on every keystroke (debounced at 250ms).
+
+---
+
+### Q19. What is the Movie Success Prediction module?
+
+> The prediction module uses a **Random Forest Regressor** to predict a movie's popularity score based on its metadata (budget, runtime, release year, genres, keyword count). It's trained on the TMDB dataset with an R² score of 0.5441, meaning it explains 54% of the variance in popularity. The model is saved as a pickle file and loaded at server startup for instant predictions.
+
+---
+
+### Q20. Why did you predict popularity instead of vote_average (rating)?
+
+> We tested both. Predicting vote_average from metadata alone gave near-zero R² — movie ratings depend on subjective factors like script quality, acting, and direction that aren't captured in budget/runtime/genres. Popularity, on the other hand, is strongly influenced by budget and marketing, giving R² = 0.54. This makes popularity a more practical and accurate prediction target for the "success" use case.
+
+---
+
+### Q21. What is Random Forest and why did you use it?
+
+> Random Forest is an **ensemble learning method** that builds multiple decision trees and averages their predictions. We used it because:
+> - Handles both numerical and categorical features well (budget + genre dummies)
+> - Robust to outliers and missing data
+> - Provides feature importance (which features matter most)
+> - Doesn't require feature scaling
+> - Works well with small-to-medium datasets like ours (4803 rows)
+>
+> We chose 300 trees for a good balance of accuracy and training speed.
 
 ---
 
